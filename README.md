@@ -16,7 +16,7 @@
 
 <!--te-->
 ## C++11 简介
-相比于C++98/03，C++11则带来了数量可观的变化，其中包含了约140个新特性，以及对C++03标准中约600个缺陷的修正，这使得C++11更像是从C++98/03中孕育出的一种新语言。相比较而言，C++11能更好地用于系统开发和库开发、语法更加泛华和简单化、更加稳定和安全，不仅功能更强大，而且能提升程序员的开发效率。
+&emsp;&emsp;相比于C++98/03，C++11则带来了数量可观的变化，其中包含了约140个新特性，以及对C++03标准中约600个缺陷的修正，这使得C++11更像是从C++98/03中孕育出的一种新语言。相比较而言，C++11能更好地用于系统开发和库开发、语法更加泛华和简单化、更加稳定和安全，不仅功能更强大，而且能提升程序员的开发效率。
 ## C++11 新特性
 ### 1.  类型推导
 #### 1.1 auto关键字自动类型推导
@@ -54,19 +54,19 @@ auto name = value;
 #### 1.2 decltype类型推导
 &emsp;&emsp;decltype全拼为declare type，声明类型。
 * 基本语法
-```cpp
-// 其中exp为一个普通的表达式，可以是任何复杂的类型。
-// 但是必须保证exp的结果有类型。
-// 可以不初始化
-decltype(exp) varname = value;
-```
-&emsp;&emsp;decltype 能够根据变量、字面量、带有运算符的表达式推导出变量的类型。注意其中的y没有被初始化。
-```cpp
-int a = 0;
-decltype(a) b = 1;  //b 被推导成了 int
-decltype(10.8) x = 5.5;  //x 被推导成了 double
-decltype(x + 100) y;  //y 被推导成了 double
-```
+    ```cpp
+    // 其中exp为一个普通的表达式，可以是任何复杂的类型。
+    // 但是必须保证exp的结果有类型。
+    // 可以不初始化
+    decltype(exp) varname = value;
+    ```
+    &emsp;&emsp;decltype 能够根据变量、字面量、带有运算符的表达式推导出变量的类型。注意其中的y没有被初始化。
+    ```cpp
+    int a = 0;
+    decltype(a) b = 1;  //b 被推导成了 int
+    decltype(10.8) x = 5.5;  //x 被推导成了 double
+    decltype(x + 100) y;  //y 被推导成了 double
+    ```
 * decltype推导规则
     * 如果 exp 是一个不被括号( )包围的表达式，或者是一个类成员访问表达式，或者是一个单独的变量，那么 decltype(exp) 的类型就和 exp 一致，这是最普遍最常见的情况。
     * 如果 exp 是函数调用，那么 decltype(exp) 的类型就和函数返回值的类型一致。
@@ -75,42 +75,42 @@ decltype(x + 100) y;  //y 被推导成了 double
 * decltype的使用
     * auto 只能用于类的静态成员，不能用于类的非静态成员（普通成员），如果我们想推导非静态成员的类型，这个时候就必须使用 decltype了。
         * 原版代码   
-        ```cpp
-        #include <vector>
-        using namespace std;
+            ```cpp
+            #include <vector>
+            using namespace std;
 
-        template <typename T>
-        class Base {
-        public:
-            void func(T& container) {
-                m_it = container.begin();
+            template <typename T>
+            class Base {
+            public:
+                void func(T& container) {
+                    m_it = container.begin();
+                }
+
+            private:
+                typename T::iterator m_it;  //注意这里
+            };
+
+            int main()
+            {
+                const vector<int> v;
+                Base<const vector<int>> obj;
+                obj.func(v);
+
+                return 0;
             }
-
-        private:
-            typename T::iterator m_it;  //注意这里
-        };
-
-        int main()
-        {
-            const vector<int> v;
-            Base<const vector<int>> obj;
-            obj.func(v);
-
-            return 0;
-        }
-        ```
+            ```
         * decltype版
-        ```cpp
-        template <typename T>
-        class Base {
-        public:
-            void func(T& container) {
-                m_it = container.begin();
-            }
-        private:
-            decltype(T().begin()) m_it;  //注意这里
-        };
-        ```
+            ```cpp
+            template <typename T>
+            class Base {
+            public:
+                void func(T& container) {
+                    m_it = container.begin();
+                }
+            private:
+                decltype(T().begin()) m_it;  //注意这里
+            };
+            ```
 #### 1.3 auto与decltype配合：拖尾返回类型
 &emsp;&emsp;考虑这样一个例子加法函数的例子，在传统 C++ 中我们必须这么写：
 ```cpp
@@ -124,10 +124,17 @@ R add(T x, U y) {
 ```cpp
 decltype(x+y) add(T x, U y);
 ```
-但事实上这样的写法并不能通过编译。这是因为在编译器读到decltype(x+y) 时，x 和 y 尚未被定义。为了解决这个问题，C++11 还引入了一个叫做**拖尾返回类型（trailing return type**，利用 auto 关键字将返回类型后置：
+但事实上这样的写法并不能通过编译。这是因为在编译器读到decltype(x+y) 时，x 和 y 尚未被定义。为了解决这个问题，C++11 还引入了一个叫做**拖尾返回类型（trailing return type)**，利用 auto 关键字将返回类型后置：
 ```cpp
 template<typename T, typename U>
 auto add(T x, U y) -> decltype(x+y) {
+    return x+y;
+}
+```
+从 C++14 开始是可以直接让普通函数具备返回值推导，因此下面的写法变得合法：
+```cpp
+template<typename T, typename U>
+auto add(T x, U y) {
     return x+y;
 }
 ```
@@ -138,3 +145,9 @@ auto add(T x, U y) -> decltype(x+y) {
 &emsp;&emsp;为了解决这个问题，C++11 引入了 nullptr 关键字，专门用来区分空指针、0。nullptr 的类型为 nullptr_t，能够隐式的转换为任何指针或成员指针的类型，也能和他们进行相等或者不等的比较。
 
 ### 3. 
+
+
+## 参考资料
+[c语言中文网](http://c.biancheng.net/cplus/11/)
+[CSDN:C++11常用新特性快速一览](https://blog.csdn.net/jiange_zh/article/details/79356417)
+
