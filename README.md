@@ -144,7 +144,6 @@ auto add(T x, U y) {
 &emsp;&emsp;C++ 不允许直接将 void * 隐式转换到其他类型，但如果 NULL 被定义为 ((void*)0)，那么当编译char *ch = NULL;时，NULL 只好被定义为 0。
 &emsp;&emsp;为了解决这个问题，C++11 引入了 nullptr 关键字，专门用来区分空指针、0。nullptr 的类型为 nullptr_t，能够隐式的转换为任何指针或成员指针的类型，也能和他们进行相等或者不等的比较。
 
-### 3. 
 
 
 ## 参考资料
