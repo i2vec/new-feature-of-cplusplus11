@@ -145,6 +145,6 @@ auto add(T x, U y) {
 &emsp;&emsp;为了解决这个问题，C++11 引入了 nullptr 关键字，专门用来区分空指针、0。nullptr 的类型为 nullptr_t，能够隐式的转换为任何指针或成员指针的类型，也能和他们进行相等或者不等的比较。  
 
 ## 参考资料
-[c语言中文网](http://c.biancheng.net/cplus/11/)
+[C语言中文网](http://c.biancheng.net/cplus/11/)  
 [CSDN:C++11常用新特性快速一览](https://blog.csdn.net/jiange_zh/article/details/79356417)
 
