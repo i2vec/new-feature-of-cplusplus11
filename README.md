@@ -432,5 +432,5 @@ for(auto &i : arr) {
     ```
 ## 参考资料
 [C语言中文网](http://c.biancheng.net/cplus/11/)  
-[CSDN:C++11常用新特性快速一览](https://blog.csdn.net/jiange_zh/article/details/79356417)
+[CSDN:C++11常用新特性快速一览](https://blog.csdn.net/jiange_zh/article/details/79356417)  
 [C++11特性—右值引用](https://blog.csdn.net/gls_nuaa/article/details/126134537)
