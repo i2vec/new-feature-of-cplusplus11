@@ -560,9 +560,125 @@ for(auto &i : arr) {
         &emsp;&emsp;std::unique_ptr是一个独占型的智能指针，它不允许其他的智能指针共享其内部的指针，可以通过它的构造函数初始化一个独占智能指针对象，但是不允许通过赋值将一个unique_ptr赋值给另一个unique_ptr。  
         * 删除器  
         &emsp;&emsp; unique_ptr指定删除器和shared_ptr指定删除器是有区别的，unique_ptr指定删除器的时候需要确定删除器的类型，所以不能像shared_ptr那样直接指定删除器。  
+        * 样例代码  
+            ```cpp
+            #include <iostream>
+            using namespace std;
+            #include <string>
+            #include <memory>
+            #include <functional>
+            
+            class Test
+            {
+            public:
+                Test() : m_num(0)
+                {
+                    cout << "construct Test..." << endl;
+                }
+            
+                Test(int x) : m_num(1)
+                {
+                    cout << "construct Test, x = " << x << endl;
+                }
+            
+                Test(string str) : m_num(2)
+                {
+                    cout << "construct Test, str = " << str << endl;
+                }
+            
+                ~Test()
+                {
+                    cout << "destruct Test..." << endl;
+                }
+            
+                void setValue(int v)
+                {
+                    this->m_num = v;
+                }
+            
+                void print()
+                {
+                    cout << "m_num: " << this->m_num << endl;
+                }
+            
+            private:
+                int m_num;
+            };
+            
+            int main()
+            {
+                /*--------------------------  一，初始化智能指针unique_ptr  ------------------------------*/
+                //1.通过构造函数初始化
+                unique_ptr<int> ptr1(new int(3));
+            
+                //2.通过移动函数初始化
+                unique_ptr<int> ptr2 = move(ptr1);
+            
+                //.通过reset初始化
+                ptr2.reset(new int(7));
+            
+                /*--------------------------  二，unique_ptr的使用  ------------------------------*/
+                //1.方法一
+                unique_ptr<Test> ptr3(new Test(666));
+                Test* pt = ptr3.get();
+                pt->setValue(6);
+                pt->print();
+            
+                //2.方法二
+                ptr3->setValue(777);
+                ptr3->print();
+            
+                /*------------------------------------  三，指定删除器  -----------------------------------*/
+                //1.函数指针类型
+                //using ptrFunc = void(*)(Test*);
+                //unique_ptr<Test, ptrFunc> ptr4(new Test("hello"), [](Test* t) {
+                //    cout << "-----------------------" << endl;
+                //    delete t;
+                //    });
+            
+                //2.仿函数类型（利用可调用对象包装器）
+                unique_ptr<Test, function<void(Test*)>> ptr4(new Test("hello"), [](Test* t) {
+                    cout << "-----------------------" << endl;
+                    delete t;
+                    });
+            
+                /*---------- 四，独占(共享)的智能指针可以管理数组类型的地址，能够自动释放 ---------*/
+                unique_ptr<Test[]> ptr5(new Test[3]);
+            
+                //在c++11中shared_ptr不支持下面的写法，c++11以后才支持的
+                shared_ptr<Test[]> ptr6(new Test[3]);
+            
+                return 0;
+            }
+            ```
     * 弱引用的智能指针weak_ptr  
         &emsp;&emsp;弱引用智能指针std::weak_ptr可以看做是shared_ptr的助手，它不管理shared_ptr内部的指针。std::weak_ptr没有重载操作符*和->，因为它不共享指针，不能操作资源，所以它的构造不会增加引用计数，析构也不会减少引用计数，它的主要作用就是作为一个旁观者监视shared_ptr中管理的资源是否存在。  
-        
+        * 初始化  
+            ```cpp
+            #include <iostream>
+            #include <memory>
+            using namespace std;
+
+            int main() 
+            {
+                shared_ptr<int> sp(new int);
+
+                weak_ptr<int> wp1;
+                weak_ptr<int> wp2(wp1);
+                weak_ptr<int> wp3(sp);
+                weak_ptr<int> wp4;
+                wp4 = sp;
+                weak_ptr<int> wp5;
+                wp5 = wp3;
+
+                return 0;
+            }
+            ```
+        * 常用函数  
+            a. 通过调用expired()方式来判断观测的资源是否已经被释放  
+            b. 通过调用lock()方法来获取管理所检测资源的shared_ptr对象  
+            c. 通过调用reset()方法来清空对象，使其不监测任何资源
+ 
 
 
 ## 参考资料
