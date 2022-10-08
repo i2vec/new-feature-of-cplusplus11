@@ -429,8 +429,143 @@ for(auto &i : arr) {
         std::cout << "ch:" << ch << std::endl;
         std::cout << "str:" << str << std::endl;
     }
-    ```
+    ```  
+### 9. 智能指针
+* 简介  
+&emsp;&emsp;在C++中没有垃圾回收机制，必须自己释放分配的内存，否则就会造成内存泄漏。解决这个问题最有效的方法是使用智能指针（smart pointer）。智能指针是存储指向动态分配（堆）对象指针的累，用于生存期的控制，能够确保在离开指针所在的作用域的时候，自动地销毁动态分配的对象，防止内存泄露。智能指针的核心实现技术是引用计数，每使用它一次，内部引用计数加1，，每析构一次内部的引用计数减1，减为0的时候，删除所指向的堆内存。  
+* 共享指针分类  
+    > C++11提供了三种智能指针，使用这些智能指针时需要引用头文件\<memory\> 
+    
+    * std::shared_ptr: 共享的智能指针
+    * std::unique_str: 独占的智能指针
+    * std::weak_ptr: 弱引用的智能指针，它不共享指针，不能操作资源，是用来监视shared_ptr的。  
+
+* 分析  
+    * shared_ptr
+        1. 共享智能指针是指多个智能指针可以同时管理同一块有效的内存，共享智能指针shared_ptr 是一个模板类，如果要进行初始化有三种方式：通过构造函数、std::make_shared辅助函数以及reset方法。共享智能指针对象初始化完毕之后就指向了要管理的那块堆内存，如果想要查看当前有多少个智能指针同时管理着这块内存可以使用共享智能指针提供的一个成员函数use_count。  
+        2. 对应基础数据类型来说，通过操作智能指针和操作智能指针管理的内存效果是一样的，可以直接完成数据的读写。但是如果共享智能指针管理的是一个对象，那么就需要取出原始内存的地址再操作，可以调用共享智能指针类提供的get()方法得到原始地址。  
+        3. 当智能指针管理的内存对应的引用计数变为0的时候，这块内存就会被智能指针析构掉了。另外，我们在初始化智能指针的时候也可以自己指定删除动作，这个删除操作对应的函数被称之为删除器，这个删除器函数本质是一个回调函数，我们只需要进行实现，其调用是由智能指针完成的。  
+        * 样例代码
+            ```cpp
+            #include <iostream>
+            using namespace std;
+            #include <string>
+            #include <memory>
+
+            class Test
+            {
+            public:
+                Test() : m_num(0)
+                {
+                    cout << "construct Test..." << endl;
+                }
+
+                Test(int x) : m_num(0)
+                {
+                    cout << "construct Test, x = " << x << endl;
+                }
+
+                Test(string str) : m_num(0)
+                {
+                    cout << "construct Test, str = " << str << endl;
+                }
+
+                ~Test()
+                {
+                    cout << "destruct Test..." << endl;
+                }
+
+                void setValue(int v)
+                {
+                    this->m_num = v;
+                }
+
+                void print()
+                {
+                    cout << "m_num: " << this->m_num << endl;
+                }
+
+            private:
+                int m_num;
+            };
+
+            int main()
+            {
+                /*--------------------------  一，初始化智能指针shared_ptr  ------------------------------*/
+                //1.通过构造函数初始化
+                shared_ptr<int> ptr1(new int(3));
+                cout << "ptr1管理的内存引用计数: " << ptr1.use_count() << endl;
+
+                //2.通过移动和拷贝构造函数初始化
+                shared_ptr<int> ptr2 = move(ptr1);
+                cout << "ptr1管理的内存引用计数: " << ptr1.use_count() << endl;
+                cout << "ptr2管理的内存引用计数: " << ptr2.use_count() << endl;
+
+                shared_ptr<int> ptr3 = ptr2;
+                cout << "ptr2管理的内存引用计数: " << ptr2.use_count() << endl;
+                cout << "ptr3管理的内存引用计数: " << ptr3.use_count() << endl;
+
+                //3.通过 std::make_shared初始化
+                shared_ptr<int> ptr4 = make_shared<int>(8);
+                shared_ptr<Test> ptr5 = make_shared<Test>(7);
+                shared_ptr<Test> ptr6 = make_shared<Test>("GOOD LUCKLY!");
+
+                //4.通过reset初始化
+                ptr6.reset(); //重置ptr6, ptr6的引用基数为0
+                cout << "ptr6管理的内存引用计数: " << ptr6.use_count() << endl;
+
+                ptr5.reset(new Test("hello"));
+                cout << "ptr5管理的内存引用计数: " << ptr5.use_count() << endl;
+
+                cout << endl;
+                cout << endl;
+
+                /*--------------------------  二，共享智能指针shared_ptr的使用  ------------------------------*/
+                //1.方法一
+                Test* t = ptr5.get();
+                t->setValue(1000);
+                t->print();
+
+                //2.方法二
+                ptr5->setValue(7777);
+                ptr5->print();
+
+                printf("\n\n");
+                /*------------------------------------  三，指定删除器  -----------------------------------*/
+                 //1.简单举例
+                shared_ptr<Test> ppp(new Test(100), [](Test* t) {
+                    //释放内存
+                    cout << "Test对象的内存被释放了......." << endl;
+                    delete t;
+                    });
+                printf("----------------------------------------------------------------------\n");
+
+                2.如果是数组类型的地址，就需要自己写指定删除器，否则内存无法全部释放
+                //shared_ptr<Test> p1(new Test[5], [](Test* t) {
+                //    delete[]t;
+                //    });
+
+                //3.也可以使用c++给我们提供的 默认删除器函数（函数模板）
+                shared_ptr<Test> p2(new Test[3], default_delete<Test[]>());
+
+                //4.c++11以后可以这样写 也可以自动释放内存
+                shared_ptr<Test[]> p3(new Test[3]);
+
+                return 0;
+            }
+            ```
+    * 独占的智能指针unique_ptr
+        * 初始化  
+        &emsp;&emsp;std::unique_ptr是一个独占型的智能指针，它不允许其他的智能指针共享其内部的指针，可以通过它的构造函数初始化一个独占智能指针对象，但是不允许通过赋值将一个unique_ptr赋值给另一个unique_ptr。  
+        * 删除器  
+        &emsp;&emsp; unique_ptr指定删除器和shared_ptr指定删除器是有区别的，unique_ptr指定删除器的时候需要确定删除器的类型，所以不能像shared_ptr那样直接指定删除器。  
+    * 弱引用的智能指针weak_ptr  
+        &emsp;&emsp;弱引用智能指针std::weak_ptr可以看做是shared_ptr的助手，它不管理shared_ptr内部的指针。std::weak_ptr没有重载操作符*和->，因为它不共享指针，不能操作资源，所以它的构造不会增加引用计数，析构也不会减少引用计数，它的主要作用就是作为一个旁观者监视shared_ptr中管理的资源是否存在。  
+        
+
+
 ## 参考资料
 [C语言中文网](http://c.biancheng.net/cplus/11/)  
 [CSDN:C++11常用新特性快速一览](https://blog.csdn.net/jiange_zh/article/details/79356417)  
-[C++11特性—右值引用](https://blog.csdn.net/gls_nuaa/article/details/126134537)
+[C++11特性—右值引用](https://blog.csdn.net/gls_nuaa/article/details/126134537)  
+[C++11智能指针](https://blog.csdn.net/qq_56673429/article/details/124837626)  
