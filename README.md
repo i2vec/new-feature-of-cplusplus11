@@ -111,7 +111,7 @@ auto name = value;
                 decltype(T().begin()) m_it;  //注意这里
             };
             ```
-#### 1.3 auto与decltype配合：拖尾返回类型
+#### 1.3 auto与decltype配合：拖尾返回类型（返回类型后置）
 &emsp;&emsp;考虑这样一个例子加法函数的例子，在传统 C++ 中我们必须这么写：
 ```cpp
 template<typename R, typename T, typename U>
@@ -142,9 +142,289 @@ auto add(T x, U y) {
 &emsp;&emsp;nullptr 出现的目的是为了替代 NULL。  
 &emsp;&emsp;在某种意义上来说，传统 C++ 会把 NULL、0 视为同一种东西，这取决于编译器如何定义 NULL，有些编译器会将 NULL 定义为 ((void*)0)，有些则会直接将其定义为 0。  
 &emsp;&emsp;C++ 不允许直接将 void * 隐式转换到其他类型，但如果 NULL 被定义为 ((void*)0)，那么当编译char *ch = NULL;时，NULL 只好被定义为 0。  
-&emsp;&emsp;为了解决这个问题，C++11 引入了 nullptr 关键字，专门用来区分空指针、0。nullptr 的类型为 nullptr_t，能够隐式的转换为任何指针或成员指针的类型，也能和他们进行相等或者不等的比较。  
+&emsp;&emsp;为了解决这个问题，C++11 引入了 nullptr 关键字，专门用来区分空指针、0。nullptr 的类型为 nullptr_t，能够隐式的转换为任何指针或成员指针的类型，也能和他们进行相等或者不等的比较。 
+```cpp
+//根据语言定义，在指针上下文中的常数0会在编译时转换为空指针。
+//也就是说，在赋值比较的时候，如果一边是指针类型的值或者表达式，
+//编译器可以确定另一边的常数0为空指针并生成正确的空指针指。
+char* a = 0;
+if(a == nullptr){
+    std::cout << "hello nullptr" << std::endl;
+}
+return 0;
+``` 
 
+### 3. 初始化列表
+&emsp;&emsp;C++11提供了统一的语法来初始化任意的对象，例如：
+```cpp
+struct A {
+    int a;
+    float b;
+};
+struct B {
+
+    B(int _a, float _b): a(_a), b(_b) {}
+private:
+    int a;
+    float b;
+};
+
+A a {1, 1.1};    // 统一的初始化语法
+B b {2, 2.2};
+```
+C++11 还把初始化列表的概念绑定到了类型上，并将其称之为 std::initializer_list，允许构造函数或其他函数像参数一样使用初始化列表，这就为类对象的初始化与普通数组和 POD 的初始化方法提供了统一的桥梁，例如：
+```cpp
+#include <initializer_list>
+
+class Magic {
+public:
+    Magic(std::initializer_list<int> list) {}
+};
+
+Magic magic = {1,2,3,4,5};
+std::vector<int> v = {1, 2, 3, 4};
+```
+### 4. 支持函数模版的默认模版参数
+&emsp;&emsp;在C++98标准中，类模版可以有默认的模版参数，如下：
+```cpp
+template <typename T, typename U = int, U N = 0>
+struct Foo
+{
+    // ...
+};
+```
+但是不支持函数的默认模版参数：
+```cpp
+template <typename T = int>  // error in C++98/03: default template arguments
+void func()
+{
+    // ...
+}
+```
+现在这一个限制在C++11中被解除了。上面的func函数在C++11中可以直接进行调用。 
+
+### 5. 区间迭代
+&emsp;&emsp;C++11引入了基于范围的迭代写法，我们可以写出像python一样简介的循环语句。
+```cpp
+// & 启用了引用
+for(auto &i : arr) {    
+    std::cout << i << std::endl;
+}
+```
+### 6. Lambda表达式
+* 基本语法
+    ```cpp
+    [caputure] (params) opt -> ret { body; };
+    ```
+    1. capture是捕获列表:lambda表达式的捕获列表精细控制了lambda表达式能够访问的外部变量，以及如何访问这些变量。
+        * []不捕获任何变量。
+        * [&]捕获外部作用域中所有变量，并作为引用在函数体中使用（按引用捕获）。
+        * [=]捕获外部作用域中所有变量，并作为副本在函数体中使用(按值捕获)。注意值捕获的前提是变量可以拷贝，且被捕获的变量在 lambda 表达式被创建时拷贝，而非调用时才拷贝。如果希望lambda表达式在调用时能即时访问外部变量，我们应当使用引用方式捕获。
+    2. params:参数表；(选填)
+    3. opt:函数选项；可以填mutable,exception,attribute（选填）
+        * mutable说明lambda表达式体内的代码可以修改被捕获的变量，并且可以访问被捕获的对象的non-const方法。
+        * exception说明lambda表达式是否抛出异常以及何种异常。
+        * attribute用来声明属性。
+    4. ret是返回值类型（拖尾返回类型）。(选填)
+    5. body是函数体。
+* 排序中使用lambda表达式
+    ```cpp
+    #include<vector>
+    #include<algorithm>
+    #include<iostream>
+
+    int main()
+    {
+        std::vector<int> tmpv = {1, 3, 5, 2, 4, 6};
+        std::sort(tmpv.begin(),tmpv.end(), [](int a, int b){return a > b;});
+        for(auto& i : tmpv){
+            std::cout << i << " ";
+        }
+        std::cout << std::endl;
+        return 0;
+    }
+    ```
+
+### 7. 右值引用
+* 什么是左右值
+    * 左值：
+        1. 左值可以取地址
+        2. 左值可以修改
+        3. 左值可以放在等号左右两边
+    * 右值
+        1. 右值不可以取地址
+        2. 右值不可以修改
+        3. 右值只能放在等号右边
+        4. 右值往往是没有名称的
+        * 右值也分为两种:
+            1. 纯右值
+                纯右值int a = 3;就是指等号右边的常数，上式中的3。
+            2. 将亡值
+                a. 函数的临时返回值int a = f(3); f(3)的返回值为右值，副本拷给a，然后消失。
+                b. 表达式像(x+y)，其中(x+y)是右值。
+    * 左右值使用原则
+        1. 右值可以赋给左值，左值不可以赋给右值
+            ```cpp
+            int a = 3;  // a是左值，3是右值
+            int d = a;  // d和a都是左值，左值可以赋给左值
+            int &&d = a; × // 右值引用左值不行
+            int &&d = 10;  // 右值引用右值可以
+            int &&d = f(10);  // 右值引用右值可以
+            ```
+        2. 右值无法修改
+        3. 编译器允许为左值建立引用，但不可以为右值建立引用
+    这样存在一个问题：只有左值可以修改，那如果想要修改右值怎么办？因此有了**右值引用**。
+* 右值引用语法： &&
+* 使用右值引用注意三个问题
+    1. 右值引用必须要进行初始化
+    2. 不能使用左值为右值做初始化
+    3. 右值引用可以对右值进行修改
+* 右值引用的好处
+&emsp;&emsp;先想一下引用的目的，传递参数有两种方式：值传递和引用传递。两者相比引用传递的优势就是通过传递地址，来减少一次拷贝。在常规写程序的时候，使用的都是左值引用。左值引用有两个使用场景：函数传参、函数返回值。  
+    1. 函数传参： int f(int& a);
+    2. 函数返回值：int& f();
+
+    以上两种情况使用的都是引用传递相比于值传递减少了拷贝次数。但是有一种情况会出问题：就是返回值是一个临时对象。如下
+
+    ```cpp
+    int& f(){
+        int a;
+        return a;
+    }
+    ```
+    &emsp;&emsp;当返回对象a的地址的时候，a作为栈上的临时对象，作用域已经到了，将被析构。这样如果外界再对这个地址进行访问的时候，就会出现问题。这也是左值引用的一个弊端，而右值引用的出现就是为了解决这个问题。那右值引用如何解决返回的临时变量析构？当返回值为右值引用是，会把返回的临时变量中的内存据为己用，仍保持了有效性，也避免了拷贝。
+* std::move
+&emsp;&emsp;std::move()可以将左值转换为右值。
+* 右值引用的应用场景
+&emsp;&emsp;右值引用主要有两个应用场景：移动语义、完美转发
+    1. 移动语义（就是将传进来的变量内存直接偷走）
+    &emsp;&emsp;如果我们将复制这中操作看作资源转移，那么传统的资源转让是通过拷贝进行实现的，需要两份空间。而移动语义是通过移动来实现资源转让，只需要一个空间。来看一下移动语义的实现原理:  
+    &emsp;&emsp;考虑下面这种情况，我们有一个工厂，每次都会返回一个Test对象，但是由于Test()只在函数内起作用，因此返回后就会调用析构函数导致无法回传。
+
+        ```cpp
+        class Test {
+            int * arr{nullptr};
+        public:
+            Test():arr(new int[5000]{1,2,3,4}) { 
+            	cout << "default constructor" << endl;
+            }
+            Test(const Test & t) {
+                cout << "copy constructor" << endl;
+                if (arr == nullptr) arr = new int[5000];
+                memcpy(arr, t.arr, 5000*sizeof(int));
+            }
+            ~Test(){
+                cout << "destructor" << endl;
+                delete [] arr;
+            }
+        }
+        Test createTest() {
+            return Test();
+        }
+
+        int main() {
+            Test t(createTest());
+        }
+        ```
+        这时候就用到了移动语义，修改其中构造函数。  
+
+        ```cpp
+        class Test {
+            int * arr{nullptr};
+        public:
+            Test():arr(new int[5000]{1,2,3,4}) { 
+            	cout << "default constructor" << endl;
+            }
+
+            Test(const Test & t) {
+                cout << "copy constructor" << endl;
+                if (arr == nullptr) arr = new int[5000];
+                memcpy(arr, t.arr, 5000*sizeof(int));
+            }
+            // 构造函数修改
+            Test(Test && t): arr(t.arr) {
+                cout << "move constructor" << endl;
+                t.arr = nullptr;
+            }
+            ~Test(){
+                cout << "destructor" << endl;
+                delete [] arr;
+            }
+        };
+        ```
+    2. 完美转发  
+        我们考虑一个例子：
+
+        ```cpp
+        template <typename T>
+        void func(T t) {
+            cout << "in func" << endl;
+        }
+
+        template <typename T>
+        void relay(T&& t) {
+            cout << "in relay" << endl;
+            func(t);
+        }
+
+        int main() {
+            relay(Test());
+        }
+        ```
+
+        在这个例子当中，我们的期待是，我们在main当中调用relay，Test的临时对象作为一个右值传入relay，在relay当中又被转发给了func，那这时候转发给func的参数t也应当是一个右值。也就是说，我们希望：当relay的参数是右值的时候，func的参数也是右值；当relay的参数是左值的时候，func的参数也是左值。
+        运行结果：
+
+        ```terminal
+        default constructor
+        in relay
+        copy constructor
+        in func
+        destructor
+        destructor
+        ```
+        我们看到，在relay当中转发的时候，调用了复制构造函数，也就是说编译器认为这个参数t并不是一个右值，而是左值。这个的原因已经在上一节将结果了，因为它有一个名字。那么如果我们想要实现我们所说的，如果传进来的参数是一个左值，则将它作为左值转发给下一个函数；如果它是右值，则将其作为右值转发给下一个函数，我们应该怎么做呢？  
+        这时，我们需要std::forward<T>()。与std::move()相区别的是，move()会无条件的将一个参数转换成右值，而forward()则会保留参数的左右值类型。所以我们的代码应该是这样：  
+        
+        ```cpp
+        template <typename T>
+        void func(T t) {
+            cout << "in func " << endl;
+        }
+
+        template <typename T>
+        void relay(T&& t) {
+            cout << "in relay " << endl;
+            func(std::forward<T>(t));
+        }
+        ```
+        
+
+### 8. tuple元组
+&emsp;&emsp;C++11标准新引入了一种类模版：tuple。特点为：实例化的对象可以存储任意数量、任意类型的数据。当需要存储多个不同类型的元素的时候，可以使用tuple；当函数需要返回多个数据的时候可以使用tuple存储多个返回值并进行返回。需要时网上自行查询。  
+* 样例代码
+    ```cpp
+    #include<tuple>
+    #include<string>
+    #include<iostream>
+    
+    auto get_params(){
+        std::tuple<int, char, std::string> res{1, 'a', "helloworld"};
+        return res;
+    }
+    
+    int main()
+    {
+        int in;
+        char ch;
+        std::string str;
+        std::tie(in, ch, str) = get_params();
+        std::cout << "in:" << in << std::endl;
+        std::cout << "ch:" << ch << std::endl;
+        std::cout << "str:" << str << std::endl;
+    }
+    ```
 ## 参考资料
 [C语言中文网](http://c.biancheng.net/cplus/11/)  
 [CSDN:C++11常用新特性快速一览](https://blog.csdn.net/jiange_zh/article/details/79356417)
-
+[C++11特性—右值引用](https://blog.csdn.net/gls_nuaa/article/details/126134537)
